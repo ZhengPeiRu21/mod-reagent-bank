@@ -47,8 +47,8 @@ private:
         // This query can be changed to async to improve performance, but there will be some visual bugs because the query will not be done executing when the menu refreshes
         WorldSession *session = player->GetSession();
 
-        std::string query = "SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetSession()->GetAccountId()) + " AND item_entry = " + std::to_string(entry);
-        QueryResult result = CharacterDatabase.Query("SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetSession()->GetAccountId()) + " AND item_entry = " + std::to_string(entry));
+        std::string query = "SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_entry = " + std::to_string(entry);
+        QueryResult result = CharacterDatabase.Query("SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_entry = " + std::to_string(entry));
         if (result)
         {
             uint32 storedAmount = (*result)[0].Get<uint32>();
@@ -225,7 +225,7 @@ public:
     void ShowReagentItems(Player* player, Creature* creature, uint32 item_subclass, uint16 gossipPageNumber)
     {
         WorldSession* session = player->GetSession();
-        std::string query = "SELECT item_entry, amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetSession()->GetAccountId()) + " AND item_subclass = " +
+        std::string query = "SELECT item_entry, amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_subclass = " +
                 std::to_string(item_subclass) + " ORDER BY item_entry";
         session->GetQueryProcessor().AddCallback(CharacterDatabase.AsyncQuery(query).WithCallback([=](QueryResult result)
         {

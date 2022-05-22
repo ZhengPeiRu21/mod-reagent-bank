@@ -93,13 +93,18 @@ private:
     {
         uint32 count = pItem->GetCount();
         ItemTemplate const *itemTemplate = pItem->GetTemplate();
-
-        // gems such as Malachite/Tigerseye will be stored in ITEM_SUBCLASS_METAL_STONE (7), i.e. "Metal & Stone" section
+        
         if (!(itemTemplate->Class == ITEM_CLASS_TRADE_GOODS || itemTemplate->Class == ITEM_CLASS_GEM) || itemTemplate->GetMaxStackSize() == 1)
             return;
-
         uint32 itemEntry = itemTemplate->ItemId;
         uint32 itemSubclass = itemTemplate->SubClass;
+        
+        // Put gems to ITEM_SUBCLASS_JEWELCRAFTING section
+        if (itemTemplate->Class == ITEM_CLASS_GEM)
+        {
+            itemSubclass = ITEM_SUBCLASS_JEWELCRAFTING;
+        }
+
         if (!entryToAmountMap.count(itemEntry))
         {
             // Item does not exist yet in storage
@@ -203,7 +208,15 @@ public:
             // Get the actual item subclass from the template
             const ItemTemplate *temp = sObjectMgr->GetItemTemplate(item_subclass);
             WithdrawItem(player, item_subclass);
-            ShowReagentItems(player, creature, temp->SubClass, gossipPageNumber);
+            if (temp->Class == ITEM_CLASS_GEM)
+            {
+                // Get back to ITEM_SUBCLASS_JEWELCRAFTING section when withdrawing gems
+                ShowReagentItems(player, creature, ITEM_SUBCLASS_JEWELCRAFTING, gossipPageNumber);
+            }
+            else
+            {
+                ShowReagentItems(player, creature, temp->SubClass, gossipPageNumber);
+            }
             return true;
         }
         if (item_subclass == DEPOSIT_ALL_REAGENTS)

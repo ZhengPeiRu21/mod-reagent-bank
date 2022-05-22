@@ -45,8 +45,6 @@ private:
     void WithdrawItem(Player* player, uint32 entry)
     {
         // This query can be changed to async to improve performance, but there will be some visual bugs because the query will not be done executing when the menu refreshes
-        WorldSession *session = player->GetSession();
-
         std::string query = "SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_entry = " + std::to_string(entry);
         QueryResult result = CharacterDatabase.Query("SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_entry = " + std::to_string(entry));
         if (result)
@@ -95,8 +93,11 @@ private:
     {
         uint32 count = pItem->GetCount();
         ItemTemplate const *itemTemplate = pItem->GetTemplate();
-        if (itemTemplate->Class != ITEM_CLASS_TRADE_GOODS || itemTemplate->GetMaxStackSize() == 1)
+
+        // gems such as Malachite/Tigerseye will be stored in ITEM_SUBCLASS_METAL_STONE (7), i.e. "Metal & Stone" section
+        if (!(itemTemplate->Class == ITEM_CLASS_TRADE_GOODS || itemTemplate->Class == ITEM_CLASS_GEM) || itemTemplate->GetMaxStackSize() == 1)
             return;
+
         uint32 itemEntry = itemTemplate->ItemId;
         uint32 itemSubclass = itemTemplate->SubClass;
         if (!entryToAmountMap.count(itemEntry))
@@ -116,7 +117,7 @@ private:
     void DepositAllReagents(Player* player) {
         WorldSession *session = player->GetSession();
         std::string query = "SELECT item_entry, item_subclass, amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter());
-        session->GetQueryProcessor().AddCallback( CharacterDatabase.AsyncQuery(query).WithCallback([=](QueryResult result) {
+        session->GetQueryProcessor().AddCallback( CharacterDatabase.AsyncQuery(query).WithCallback([=, this](QueryResult result) {
             std::map<uint32, uint32> entryToAmountMap;
             std::map<uint32, uint32> entryToSubclassMap;
             if (result)
@@ -227,7 +228,7 @@ public:
         WorldSession* session = player->GetSession();
         std::string query = "SELECT item_entry, amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_subclass = " +
                 std::to_string(item_subclass) + " ORDER BY item_entry";
-        session->GetQueryProcessor().AddCallback(CharacterDatabase.AsyncQuery(query).WithCallback([=](QueryResult result)
+        session->GetQueryProcessor().AddCallback(CharacterDatabase.AsyncQuery(query).WithCallback([=, this](QueryResult result)
         {
             uint32 startValue = (gossipPageNumber * (MAX_OPTIONS));
             uint32 endValue = (gossipPageNumber + 1) * (MAX_OPTIONS) - 1;

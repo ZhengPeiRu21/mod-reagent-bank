@@ -45,8 +45,6 @@ private:
     void WithdrawItem(Player* player, uint32 entry)
     {
         // This query can be changed to async to improve performance, but there will be some visual bugs because the query will not be done executing when the menu refreshes
-        WorldSession *session = player->GetSession();
-
         std::string query = "SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_entry = " + std::to_string(entry);
         QueryResult result = CharacterDatabase.Query("SELECT amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_entry = " + std::to_string(entry));
         if (result)
@@ -95,10 +93,18 @@ private:
     {
         uint32 count = pItem->GetCount();
         ItemTemplate const *itemTemplate = pItem->GetTemplate();
-        if (itemTemplate->Class != ITEM_CLASS_TRADE_GOODS || itemTemplate->GetMaxStackSize() == 1)
+        
+        if (!(itemTemplate->Class == ITEM_CLASS_TRADE_GOODS || itemTemplate->Class == ITEM_CLASS_GEM) || itemTemplate->GetMaxStackSize() == 1)
             return;
         uint32 itemEntry = itemTemplate->ItemId;
         uint32 itemSubclass = itemTemplate->SubClass;
+        
+        // Put gems to ITEM_SUBCLASS_JEWELCRAFTING section
+        if (itemTemplate->Class == ITEM_CLASS_GEM)
+        {
+            itemSubclass = ITEM_SUBCLASS_JEWELCRAFTING;
+        }
+
         if (!entryToAmountMap.count(itemEntry))
         {
             // Item does not exist yet in storage
@@ -116,7 +122,7 @@ private:
     void DepositAllReagents(Player* player) {
         WorldSession *session = player->GetSession();
         std::string query = "SELECT item_entry, item_subclass, amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter());
-        session->GetQueryProcessor().AddCallback( CharacterDatabase.AsyncQuery(query).WithCallback([=](QueryResult result) {
+        session->GetQueryProcessor().AddCallback( CharacterDatabase.AsyncQuery(query).WithCallback([=, this](QueryResult result) {
             std::map<uint32, uint32> entryToAmountMap;
             std::map<uint32, uint32> entryToSubclassMap;
             if (result)
@@ -202,7 +208,15 @@ public:
             // Get the actual item subclass from the template
             const ItemTemplate *temp = sObjectMgr->GetItemTemplate(item_subclass);
             WithdrawItem(player, item_subclass);
-            ShowReagentItems(player, creature, temp->SubClass, gossipPageNumber);
+            if (temp->Class == ITEM_CLASS_GEM)
+            {
+                // Get back to ITEM_SUBCLASS_JEWELCRAFTING section when withdrawing gems
+                ShowReagentItems(player, creature, ITEM_SUBCLASS_JEWELCRAFTING, gossipPageNumber);
+            }
+            else
+            {
+                ShowReagentItems(player, creature, temp->SubClass, gossipPageNumber);
+            }
             return true;
         }
         if (item_subclass == DEPOSIT_ALL_REAGENTS)
@@ -227,7 +241,7 @@ public:
         WorldSession* session = player->GetSession();
         std::string query = "SELECT item_entry, amount FROM custom_reagent_bank WHERE character_id = " + std::to_string(player->GetGUID().GetCounter()) + " AND item_subclass = " +
                 std::to_string(item_subclass) + " ORDER BY item_entry";
-        session->GetQueryProcessor().AddCallback(CharacterDatabase.AsyncQuery(query).WithCallback([=](QueryResult result)
+        session->GetQueryProcessor().AddCallback(CharacterDatabase.AsyncQuery(query).WithCallback([=, this](QueryResult result)
         {
             uint32 startValue = (gossipPageNumber * (MAX_OPTIONS));
             uint32 endValue = (gossipPageNumber + 1) * (MAX_OPTIONS) - 1;

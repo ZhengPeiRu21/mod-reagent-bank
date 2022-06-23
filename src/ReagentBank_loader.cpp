@@ -12,4 +12,3 @@ void Addmod_reagent_bankScripts()
 {
     AddSC_mod_reagent_bank();
 }
-

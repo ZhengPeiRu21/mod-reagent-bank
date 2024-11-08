@@ -2,6 +2,7 @@
 ## AzerothCore Module
 
 This module adds a reagent banker similar to later WoW expansions. This banker can free bag space by holding crafting reagents for players.
+Add NPC bankier with following command `.npc add 290011`. To remove it, select NPC and run `.npc delete`
 
 ## Features
 * One-click button to deposit all reagents
